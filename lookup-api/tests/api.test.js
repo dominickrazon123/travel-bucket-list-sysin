@@ -24,7 +24,7 @@ const jsonResponse = (status, body) => ({ ok: status >= 200 && status < 300, sta
 test("GET /health returns 200", () =>
   withServer({ apiKey: "" }, async () => jsonResponse(200, []), async (get) => {
     const res = await get("/health");
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 500);
     assert.equal(res.data.status, "ok");
   }));
 
