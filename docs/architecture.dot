@@ -1,0 +1,36 @@
+digraph arch {
+  rankdir=LR; fontname="Helvetica"; nodesep=0.5; ranksep=0.9;
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#eef3ff", color="#2f5bea"];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  browser [label="Browser\nhttp://localhost:8080", shape=ellipse, fillcolor="#ffffff", color="#333333"];
+
+  subgraph cluster_front { label="frontend-net"; style="dashed"; color="#2f5bea"; fontname="Helvetica";
+    proxy [label="proxy\nnginx 1.27-alpine\nport 80 (published 8080)\nadds Build label"];
+    frontend [label="frontend\nnginx 1.27-alpine\nstatic UI (index.html, edit.html)"];
+    lookup [label="lookup-api\nNode 22 + Express\nport 3001\nGET /health, /api/lookup"];
+  }
+
+  subgraph cluster_back { label="backend-net (internal, no outside access)"; style="dashed"; color="#1b7f3b"; fontname="Helvetica";
+    db [label="db\npostgres:16-alpine\nport 5432 (not published)", shape=cylinder, fillcolor="#eaf7ee", color="#1b7f3b"];
+  }
+
+  dest [label="destinations-api\nNode 22 + Express + pg\nport 3000\nGET /health, /api/destinations", fillcolor="#eef3ff"];
+  volume [label="named volume\npg-data", shape=folder, fillcolor="#fff7e0", color="#b58900"];
+  ext [label="REST Countries API\n(internet)", shape=ellipse, fillcolor="#ffffff", color="#999999"];
+
+  browser -> proxy [label="HTTP :8080"];
+  proxy -> frontend [label="/"];
+  proxy -> dest [label="/api/destinations\n/health/destinations"];
+  proxy -> lookup [label="/api/lookup\n/health/lookup"];
+  dest -> db [label="SQL (frontend-net + backend-net)"];
+  db -> volume [label="/var/lib/postgresql/data"];
+  lookup -> ext [label="HTTPS + API key"];
+
+  subgraph cluster_ci { label="Separate stack: infra/jenkins (jenkins-infra)"; style="dashed"; color="#888888"; fontname="Helvetica";
+    git [label="GitHub repo", shape=ellipse, fillcolor="#ffffff", color="#333333"];
+    jenkins [label="jenkins\nLTS + Docker CLI\nUI 8081, volume jenkins_home\ndocker.sock mounted", fillcolor="#fdecec", color="#c62828"];
+  }
+  git -> jenkins [label="push webhook (ngrok)\nfallback: Poll SCM", style=dashed];
+  jenkins -> proxy [label="docker compose up\nimages tagged BUILD_NUMBER", style=dashed, constraint=false];
+}

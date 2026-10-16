@@ -1,0 +1,81 @@
+name: travelbucket
+
+services:
+  proxy:
+    build: ./proxy
+    image: travelbucket/proxy:${TAG:-latest}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    environment:
+      BUILD_TAG: ${TAG:-dev}
+    depends_on:
+      frontend:
+        condition: service_healthy
+      destinations-api:
+        condition: service_healthy
+      lookup-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks: [frontend-net]
+
+  frontend:
+    build: ./frontend
+    image: travelbucket/frontend:${TAG:-latest}
+    restart: unless-stopped
+    networks: [frontend-net]
+
+  destinations-api:
+    build:
+      context: ./destinations-api
+      target: production
+    image: travelbucket/destinations-api:${TAG:-latest}
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:?set DB_NAME in .env}
+      DB_USER: ${DB_USER:?set DB_USER in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [frontend-net, backend-net]
+
+  lookup-api:
+    build:
+      context: ./lookup-api
+      target: production
+    image: travelbucket/lookup-api:${TAG:-latest}
+    environment:
+      RESTCOUNTRIES_API_KEY: ${RESTCOUNTRIES_API_KEY:-}
+    restart: unless-stopped
+    networks: [frontend-net]
+
+  db:
+    build: ./db
+    image: travelbucket/db:${TAG:-latest}
+    environment:
+      POSTGRES_DB: ${DB_NAME:?set DB_NAME in .env}
+      POSTGRES_USER: ${DB_USER:?set DB_USER in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [backend-net]
+
+volumes:
+  pg-data:
+
+networks:
+  frontend-net:
+  backend-net:
+    internal: true

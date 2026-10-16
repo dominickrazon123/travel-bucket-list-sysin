@@ -1,0 +1,47 @@
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+    client_max_body_size 1m;
+
+    set $frontend_upstream     http://frontend:80;
+    set $destinations_upstream http://destinations-api:3000;
+    set $lookup_upstream       http://lookup-api:3001;
+
+    location = /health {
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    location = /health/destinations {
+        rewrite ^ /health break;
+        proxy_pass $destinations_upstream;
+    }
+
+    location = /health/lookup {
+        rewrite ^ /health break;
+        proxy_pass $lookup_upstream;
+    }
+
+    location /api/destinations {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass $destinations_upstream;
+    }
+
+    location /api/lookup {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass $lookup_upstream;
+    }
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header Accept-Encoding "";
+        sub_filter '</html>' '<div id="build-badge" style="position:fixed;right:8px;bottom:8px;padding:2px 8px;font:12px monospace;background:#1a1a1a;color:#fff;border-radius:6px;opacity:.7;z-index:9999">Build ${BUILD_TAG}</div></html>';
+        sub_filter_once on;
+        proxy_pass $frontend_upstream;
+    }
+}

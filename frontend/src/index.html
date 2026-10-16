@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Bucket List</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f4f5f7;
+      --text: #1a1a1a;
+      --muted: #6b6f76;
+      --line: #e5e7eb;
+      --accent: #2f5bea;
+      --accent-text: #ffffff;
+      --danger: #c62828;
+      --ok: #1b7f3b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #131416;
+        --surface: #1c1d20;
+        --text: #ececee;
+        --muted: #9a9ea6;
+        --line: #2b2d31;
+        --accent: #6c8cff;
+        --accent-text: #0e1020;
+        --danger: #ff7b7b;
+        --ok: #5fd08a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+    #destinationForm { max-width: 520px; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1f3a8a, #3b82f6) center / cover no-repeat;
+      color: #fff;
+      position: relative;
+    }
+    .hero::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,.15));
+    }
+    .hero .wrap { position: relative; padding-top: 120px; padding-bottom: 36px; }
+    .hero h1 { font-size: 34px; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 4px; }
+    .hero p { margin: 0; opacity: .9; }
+
+    main { padding-top: 40px; padding-bottom: 40px; }
+    h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+    section { margin-bottom: 44px; }
+
+    input, textarea {
+      width: 100%;
+      font: inherit;
+      color: inherit;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      transition: border-color .15s;
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 72px; }
+
+    button { font: inherit; cursor: pointer; border-radius: 8px; }
+    button:focus-visible, .result:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .primary { background: var(--accent); color: var(--accent-text); border: 0; padding: 10px 18px; font-weight: 550; }
+    .primary:hover { opacity: .9; }
+    .secondary { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 10px 18px; }
+    .secondary:hover { color: var(--text); }
+    .link { background: none; border: 0; padding: 2px 6px; color: var(--muted); }
+    .link:hover { color: var(--text); }
+    .link.danger:hover { color: var(--danger); }
+
+    .search { display: flex; gap: 8px; }
+    .search input { margin: 0; flex: 1; }
+    .message { min-height: 22px; margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+    .message.error { color: var(--danger); }
+    .message.success { color: var(--ok); }
+    .actions { display: flex; gap: 8px; margin-top: 4px; }
+
+    /* Photos */
+    .photo { background: var(--surface); overflow: hidden; position: relative; }
+    .photo img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .4s; }
+    .photo img.loaded { opacity: 1; }
+
+    /* Search results */
+    #results { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 10px; }
+    .result {
+      display: flex; gap: 14px; align-items: center;
+      padding: 10px; background: var(--surface);
+      border: 1px solid transparent; border-radius: 12px;
+      cursor: pointer; transition: border-color .15s;
+    }
+    .result:hover { border-color: var(--accent); }
+    .result .photo { width: 88px; height: 66px; border-radius: 8px; flex: none; }
+    .result .name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .result .name img { width: 20px; height: 14px; object-fit: cover; border-radius: 2px; }
+    .result .meta { color: var(--muted); font-size: 13px; }
+
+    /* Destination cards */
+    #destinations { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    @media (max-width: 560px) { #destinations { grid-template-columns: 1fr; } }
+    .card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+    .card .photo { aspect-ratio: 16 / 10; }
+    .card .body { padding: 14px 16px 10px; flex: 1; }
+    .card .name { font-weight: 600; font-size: 16px; }
+    .card .capital { color: var(--muted); font-size: 14px; }
+    .card .note { color: var(--muted); font-size: 14px; margin-top: 6px; }
+    .card .row-actions { display: flex; justify-content: flex-end; padding: 0 10px 10px; }
+    .empty, .error { grid-column: 1 / -1; color: var(--muted); }
+    .error { color: var(--danger); }
+
+    /* Results + side tips */
+    .split { display: grid; gap: 20px; align-items: start; }
+    @media (min-width: 721px) { .split.with-tips { grid-template-columns: 1fr 1fr; } }
+    .result.selected { border-color: var(--accent); }
+    .tips {
+      border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+      position: sticky; top: 16px; background: var(--bg);
+    }
+    .tips[hidden] { display: none; }
+    .tips h3 { font-size: 16px; margin: 0 0 8px; }
+    .tips p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+    .tips ul { margin: 0 0 14px; padding-left: 18px; font-size: 14px; }
+    .tips li { margin-bottom: 8px; }
+    .tips .tips-actions { display: flex; align-items: center; gap: 14px; }
+    .tips a { color: var(--accent); font-size: 13px; }
+    .tips { max-height: calc(100vh - 32px); overflow-y: auto; }
+    .budget { border-top: 1px solid var(--line); padding-top: 14px; margin-bottom: 16px; }
+    .budget h4 { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+    .tier { margin-bottom: 14px; }
+    .tier-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .tier-name { font-weight: 600; font-size: 14px; }
+    .tier-price { font-size: 14px; }
+    .tier-price small { color: var(--muted); font-size: 12px; }
+    .tier ul { margin: 0; font-size: 13px; color: var(--muted); }
+    .tier li { margin-bottom: 2px; }
+    .budget .note { font-size: 12px; margin: 0; }
+
+    footer { color: var(--muted); font-size: 12px; padding-bottom: 40px; }
+  
+    .row { display: flex; gap: 8px; }
+    .row input { margin-bottom: 10px; }
+    select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; width: 100%; }
+    .muted { color: var(--muted); font-weight: 400; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .toolbar h2 { margin: 0; }
+    .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tools select { width: auto; margin: 0; padding: 6px 8px; font-size: 13px; }
+    .small { padding: 6px 12px; font-size: 13px; }
+    .star { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.5); color: #fff; border: 0; width: 30px; height: 30px; font-size: 16px; line-height: 1; }
+    .star.on { color: #ffd54a; }
+    .badge { position: absolute; left: 8px; top: 8px; background: var(--ok); color: #fff; font-size: 12px; padding: 2px 10px; border-radius: 99px; }
+    .card.dragging { opacity: .4; }
+    .card[draggable="true"] { cursor: grab; }
+    .card .meta { margin-top: 8px; font-size: 13px; color: var(--muted); }
+    .card .row-actions { flex-wrap: wrap; }
+    .link.on { color: var(--ok); }
+    .details { padding: 0 16px 14px; font-size: 13px; }
+    .details p { margin: 0 0 10px; }
+    .facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 10px; }
+    .facts dt { color: var(--muted); } .facts dd { margin: 0; }
+    .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+    #map { height: 340px; border-radius: 14px; border: 1px solid var(--line); }
+    @media print {
+      .hero, main > section:not(#listSection), .tools, .star, .card .row-actions, footer { display: none !important; }
+      .card { break-inside: avoid; }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+  <header class="hero" id="hero">
+    <div class="wrap">
+      <h1>Travel Bucket List</h1>
+      <p>Places you want to see, all in one spot.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section>
+      <h2>Search a country</h2>
+      <form id="lookupForm" class="search">
+        <input id="search" placeholder="e.g. Japan" autocomplete="off" aria-label="Country name" />
+        <button type="submit" class="primary">Search</button>
+      </form>
+      <p id="lookupMessage" class="message" role="status"></p>
+      <div id="split" class="split">
+        <ul id="results"></ul>
+        <aside id="tips" class="tips" hidden aria-live="polite"></aside>
+      </div>
+    </section>
+
+    <section>
+      <h2 id="formTitle">Add a destination</h2>
+      <form id="destinationForm">
+        <input id="country" placeholder="Country" required />
+        <input id="capital" placeholder="Capital" />
+        <textarea id="note" placeholder="Why do you want to visit?"></textarea>
+        <div class="row">
+          <input id="date" type="date" aria-label="Target date" title="Target date" />
+          <input id="days" type="number" min="1" max="365" placeholder="Days" aria-label="Trip length in days" />
+          <select id="tier" aria-label="Budget">
+            <option value="low">Low budget</option>
+            <option value="mid" selected>Medium budget</option>
+            <option value="high">Extreme budget</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="submit" id="submitBtn" class="primary">Add destination</button>
+          <button type="button" id="cancelBtn" class="secondary" hidden>Cancel</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="listSection">
+      <div class="toolbar">
+        <h2>My destinations <span id="counter" class="muted"></span></h2>
+        <div class="tools">
+          <select id="filter" aria-label="Filter">
+            <option value="all">All</option><option value="planned">Planned</option>
+            <option value="visited">Visited</option><option value="fav">Favorites</option>
+          </select>
+          <select id="sort" aria-label="Sort">
+            <option value="manual">My order (drag)</option><option value="name">Name</option>
+            <option value="date">Date</option><option value="cost">Cost</option>
+          </select>
+          <button type="button" class="secondary small" id="printBtn">Print</button>
+          <button type="button" class="secondary small" id="copyBtn">Copy list</button>
+        </div>
+      </div>
+      <ul id="destinations"></ul>
+    </section>
+
+    <section id="mapSection" hidden>
+      <h2>Map</h2>
+      <div id="map"></div>
+    </section>
+
+    <footer>Photos from Wikipedia and Wikimedia Commons. Travel tips from Wikivoyage. Country data from REST Countries. Exchange rates from open.er-api.com. Climate and geocoding from Open-Meteo. Maps from OpenStreetMap and Leaflet.</footer>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let editingId = null;
+
+    async function api(url, options) {
+      const res = await fetch(url, {
+        headers: { "Content-Type": "application/json" },
+        ...options,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || `Request failed (${res.status})`);
+      return body;
+    }
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function setMessage(text, type) {
+      const m = $("lookupMessage");
+      m.textContent = text;
+      m.className = "message " + (type || "");
+    }
+
+    /* ---------- Photos (Wikipedia page images, no API key) ---------- */
+    const photoCache = new Map();
+
+    function getPhoto(title, width) {
+      if (!title) return Promise.resolve(null);
+      const key = title + "|" + width;
+      if (!photoCache.has(key)) {
+        photoCache.set(key, (async () => {
+          try {
+            const res = await fetch(
+              "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+                encodeURIComponent(title.replace(/ /g, "_"))
+            );
+            if (!res.ok) return null;
+            const d = await res.json();
+            if (d.type === "disambiguation") return null;
+            const src = d.thumbnail?.source;
+            if (!src) return null;
+            // Wikimedia serves fixed thumbnail widths (330, 500, 960, 1280, 1920)
+            return src.replace(/\/\d+px-/, `/${width}px-`);
+          } catch {
+            return null;
+          }
+        })());
+      }
+      return photoCache.get(key);
+    }
+
+    // Try the capital first (usually a skyline/landmark), then the country page
+    async function findPhoto(capital, country, width) {
+      return (await getPhoto(capital, width)) || (await getPhoto(country, width));
+    }
+
+    function photoBox(capital, country, width) {
+      const box = el("div", "photo");
+      findPhoto(capital, country, width).then((url) => {
+        if (!url) return;
+        const img = document.createElement("img");
+        img.alt = `${capital || country}`;
+        img.loading = "lazy";
+        img.onload = () => img.classList.add("loaded");
+        img.onerror = () => img.remove();
+        img.src = url;
+        box.appendChild(img);
+      });
+      return box;
+    }
+
+    // Hero: random landmark, falls back to the blue gradient if nothing loads
+    (async function loadHero() {
+      const spots = ["Santorini", "Machu Picchu", "Matterhorn", "Ha Long Bay", "Petra", "Amalfi Coast", "Banff National Park"];
+      spots.sort(() => Math.random() - 0.5);
+      for (const spot of spots) {
+        const url = await getPhoto(spot, 1280);
+        if (!url) continue;
+        const probe = new Image();
+        probe.onload = () => { $("hero").style.backgroundImage = `url("${url}")`; };
+        probe.src = url;
+        return;
+      }
+    })();
+
+    /* ---------- Destinations ---------- */
+    let destinations = [];
+    let picked = null;      // search result chosen for the form
+    let dragId = null;
+    const view = { filter: "all", sort: "manual" };
+    const TIER_LABEL = { low: "Low", mid: "Medium", high: "Extreme" };
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const dayCount = (d) => Math.max(1, Number(d.days) || 7);
+    const tripCost = (d) => {
+      const level = COST_LEVEL[d.country.toLowerCase()] || REGION_LEVEL[d.region] || 2;
+      return LEVELS[level][d.tier || "mid"] * dayCount(d); // USD
+    };
+    const daysUntil = (iso) => Math.ceil((new Date(iso) - new Date().setHours(0, 0, 0, 0)) / 864e5);
+    function fmtUsd(usd, d, rates) {
+      const code = currencyCodeFor(d, rates);
+      const rate = code && rates ? rates[code] : 0;
+      return rate && code !== "USD" ? money(usd * rate, code) : money(usd, "USD");
+    }
+
+    async function patch(d, fields) {
+      try {
+        Object.assign(d, await api(`/api/destinations/${d.id}`, { method: "PUT", body: JSON.stringify(fields) }));
+        render();
+        renderMap();
+      } catch (err) { alert(err.message); }
+    }
+
+    /* Geocoding + climate (Open-Meteo, no key) */
+    const geoCache = new Map();
+    function geocode(d) {
+      const name = d.capital || d.country;
+      const key = name + "|" + d.country;
+      if (!geoCache.has(key)) {
+        geoCache.set(key, (async () => {
+          try {
+            const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=en&format=json`);
+            const list = (await r.json()).results || [];
+            return list.find((x) => (x.country || "").toLowerCase() === d.country.toLowerCase()) || list[0] || null;
+          } catch { return null; }
+        })());
+      }
+      return geoCache.get(key);
+    }
+
+    async function climate(d) {
+      const g = await geocode(d);
+      if (!g) return null;
+      const y = new Date().getFullYear() - 1;
+      const r = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${g.latitude}&longitude=${g.longitude}&start_date=${y}-01-01&end_date=${y}-12-31&daily=temperature_2m_mean,precipitation_sum&timezone=auto`);
+      const j = await r.json();
+      const m = Array.from({ length: 12 }, () => ({ t: 0, p: 0, n: 0 }));
+      j.daily.time.forEach((day, i) => {
+        const t = j.daily.temperature_2m_mean[i];
+        if (t == null) return;
+        const k = Number(day.slice(5, 7)) - 1;
+        m[k].t += t; m[k].p += j.daily.precipitation_sum[i] || 0; m[k].n++;
+      });
+      return m.map((x) => ({ temp: x.t / x.n, rain: x.p }));
+    }
+
+    async function gallery(d) {
+      for (const title of [d.capital, d.country].filter(Boolean)) {
+        try {
+          const r = await fetch("https://en.wikipedia.org/api/rest_v1/page/media-list/" + encodeURIComponent(title.replace(/ /g, "_")));
+          if (!r.ok) continue;
+          const urls = ((await r.json()).items || [])
+            .filter((i) => i.type === "image" && i.srcset?.length)
+            .map((i) => i.srcset[0].src)
+            .filter((u) => !/\.svg/i.test(u))
+            .map((u) => (u.startsWith("//") ? "https:" + u : u))
+            .slice(0, 6);
+          if (urls.length >= 3) return urls;
+        } catch {}
+      }
+      return [];
+    }
+
+    function fillDetails(d, box) {
+      const facts = [
+        ["Region", d.region],
+        ["Population", d.population],
+        ["Languages", d.languages],
+        ["Currency", d.currencies || CURRENCY_OF[d.country.toLowerCase()] || d.currencyCode],
+      ].filter(([, v]) => v);
+      if (facts.length) {
+        const dl = el("dl", "facts");
+        for (const [k, v] of facts) dl.append(el("dt", "", k), el("dd", "", v));
+        box.appendChild(dl);
+      }
+
+      const weather = el("p", "", "Loading climate...");
+      box.appendChild(weather);
+      climate(d).then((m) => {
+        if (!m) { weather.textContent = "Climate data unavailable."; return; }
+        const best = m.map((x, i) => ({ i, ...x, score: Math.abs(x.temp - 23) + x.rain / 20 }))
+          .sort((a, b) => a.score - b.score).slice(0, 3).sort((a, b) => a.i - b.i);
+        const avg = Math.round(best.reduce((s, x) => s + x.temp, 0) / 3);
+        const temps = m.map((x) => x.temp);
+        weather.textContent =
+          `Best time to visit: ${best.map((x) => MONTHS[x.i]).join(", ")} (around ${avg}°C, least rain). ` +
+          `Average temperature ranges from ${Math.round(Math.min(...temps))}°C to ${Math.round(Math.max(...temps))}°C over the year.`;
+      }).catch(() => { weather.textContent = "Climate data unavailable."; });
+
+      const flights = el("a", "", "Search flights");
+      flights.href = "https://www.google.com/travel/flights?q=" + encodeURIComponent("Flights to " + (d.capital || d.country));
+      flights.target = "_blank"; flights.rel = "noopener";
+      flights.style.color = "var(--accent)";
+      const fp = el("p"); fp.appendChild(flights); box.appendChild(fp);
+
+      gallery(d).then((urls) => {
+        if (!urls.length) return;
+        const g = el("div", "gallery");
+        for (const u of urls) {
+          const img = document.createElement("img");
+          img.src = u; img.alt = d.country; img.loading = "lazy";
+          img.onerror = () => img.remove();
+          g.appendChild(img);
+        }
+        box.appendChild(g);
+      });
+    }
+
+    function cardFor(d, rates) {
+      const li = el("li", "card");
+      li.draggable = view.sort === "manual" && view.filter === "all";
+      li.ondragstart = () => { dragId = d.id; li.classList.add("dragging"); };
+      li.ondragend = () => li.classList.remove("dragging");
+      li.ondragover = (e) => e.preventDefault();
+      li.ondrop = async (e) => {
+        e.preventDefault();
+        if (dragId == null || dragId === d.id) return;
+        const from = destinations.findIndex((x) => x.id === dragId);
+        const to = destinations.findIndex((x) => x.id === d.id);
+        destinations.splice(to, 0, destinations.splice(from, 1)[0]);
+        render();
+        try { await api("/api/destinations/reorder", { method: "POST", body: JSON.stringify({ ids: destinations.map((x) => x.id) }) }); }
+        catch (err) { alert(err.message); }
+      };
+
+      const photo = photoBox(d.capital, d.country, 500);
+      const star = el("button", "star" + (d.favorite ? " on" : ""), d.favorite ? "★" : "☆");
+      star.setAttribute("aria-label", "Toggle favorite");
+      star.onclick = () => patch(d, { favorite: !d.favorite });
+      photo.appendChild(star);
+      if (d.status === "visited") photo.appendChild(el("span", "badge", "Visited"));
+      li.appendChild(photo);
+
+      const body = el("div", "body");
+      body.appendChild(el("div", "name", d.country));
+      if (d.capital) body.appendChild(el("div", "capital", d.capital));
+      if (d.note) body.appendChild(el("div", "note", d.note));
+
+      const total = tripCost(d);
+      const meta = el("div", "meta");
+      meta.appendChild(el("div", "", `${dayCount(d)} days, ${TIER_LABEL[d.tier || "mid"]} budget: about ${fmtUsd(total, d, rates)}`));
+      if (d.date && d.status !== "visited") {
+        const n = daysUntil(d.date);
+        if (n >= 0) {
+          meta.appendChild(el("div", "", n === 0 ? "Leaves today" : `Leaves in ${n} day${n === 1 ? "" : "s"}`));
+          meta.appendChild(el("div", "", `Save about ${fmtUsd(total / Math.max(1, Math.ceil(n / 30)), d, rates)} per month`));
+        } else {
+          meta.appendChild(el("div", "", "Target date has passed"));
+        }
+      }
+      body.appendChild(meta);
+      li.appendChild(body);
+
+      const det = el("div", "details");
+      det.hidden = true;
+      let loaded = false;
+
+      const actions = el("div", "row-actions");
+      const visit = el("button", "link" + (d.status === "visited" ? " on" : ""), d.status === "visited" ? "Visited ✓" : "Mark visited");
+      visit.onclick = () => patch(d, { status: d.status === "visited" ? "planned" : "visited" });
+      const more = el("button", "link", "Details");
+      more.onclick = () => {
+        det.hidden = !det.hidden;
+        more.textContent = det.hidden ? "Details" : "Hide";
+        if (!det.hidden && !loaded) { loaded = true; fillDetails(d, det); }
+      };
+      const edit = el("button", "link", "Edit");
+      edit.onclick = () => startEdit(d);
+      const del = el("button", "link danger", "Delete");
+      del.onclick = () => deleteDestination(d.id);
+      actions.append(visit, more, edit, del);
+      li.append(actions, det);
+      return li;
+    }
+
+    async function render() {
+      const list = $("destinations");
+      const visited = destinations.filter((d) => d.status === "visited").length;
+      $("counter").textContent = destinations.length ? `${visited} of ${destinations.length} visited` : "";
+
+      let items = destinations.filter((d) =>
+        view.filter === "all" ? true :
+        view.filter === "fav" ? d.favorite :
+        view.filter === "visited" ? d.status === "visited" : d.status !== "visited");
+
+      if (view.sort === "name") items.sort((a, b) => a.country.localeCompare(b.country));
+      if (view.sort === "date") items.sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+      if (view.sort === "cost") items.sort((a, b) => tripCost(a) - tripCost(b));
+
+      const rates = await getRates();
+      list.innerHTML = "";
+      if (!items.length) {
+        list.appendChild(el("li", "empty", destinations.length
+          ? "No destinations match this filter."
+          : "No destinations yet. Search for a country or add one above."));
+        return;
+      }
+      for (const d of items) list.appendChild(cardFor(d, rates));
+    }
+
+    async function loadDestinations() {
+      try {
+        destinations = await api("/api/destinations");
+        render();
+        renderMap();
+      } catch (err) {
+        const list = $("destinations");
+        list.innerHTML = "";
+        list.appendChild(el("li", "error", err.message));
+      }
+    }
+
+    /* Map (Leaflet + OpenStreetMap) */
+    let map, markers, mapRun = 0;
+    async function renderMap() {
+      $("mapSection").hidden = !destinations.length;
+      if (!destinations.length || !window.L) return;
+      if (!map) {
+        map = L.map("map", { scrollWheelZoom: false }).setView([20, 0], 2);
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap contributors" }).addTo(map);
+        markers = L.layerGroup().addTo(map);
+      }
+      map.invalidateSize();
+      const run = ++mapRun;
+      const pts = [];
+      markers.clearLayers();
+      for (const d of destinations) {
+        const g = await geocode(d);
+        if (run !== mapRun) return;
+        if (!g) continue;
+        const color = d.status === "visited" ? "#1b7f3b" : "#2f5bea";
+        L.circleMarker([g.latitude, g.longitude], { radius: 9, color, fillColor: color, fillOpacity: 0.7 })
+          .addTo(markers)
+          .bindPopup(el("div", "", d.country + (d.capital ? ` (${d.capital})` : "") + (d.status === "visited" ? " - visited" : "")));
+        pts.push([g.latitude, g.longitude]);
+      }
+      if (pts.length) map.fitBounds(pts, { padding: [30, 30], maxZoom: 5 });
+    }
+
+    function resetForm() {
+      editingId = null;
+      picked = null;
+      $("destinationForm").reset();
+      $("formTitle").textContent = "Add a destination";
+      $("submitBtn").textContent = "Add destination";
+      $("cancelBtn").hidden = true;
+    }
+
+    function startEdit(d) {
+      editingId = d.id;
+      picked = null;
+      $("country").value = d.country;
+      $("capital").value = d.capital || "";
+      $("note").value = d.note || "";
+      $("date").value = d.date || "";
+      $("days").value = d.days || "";
+      $("tier").value = d.tier || "mid";
+      $("formTitle").textContent = "Edit destination";
+      $("submitBtn").textContent = "Save changes";
+      $("cancelBtn").hidden = false;
+      $("country").scrollIntoView({ behavior: "smooth", block: "center" });
+      $("country").focus();
+    }
+
+    $("cancelBtn").onclick = resetForm;
+
+    $("destinationForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        country: $("country").value,
+        capital: $("capital").value,
+        note: $("note").value,
+        date: $("date").value,
+        days: $("days").value,
+        tier: $("tier").value,
+      };
+      if (picked && picked.country.toLowerCase() === payload.country.trim().toLowerCase()) {
+        Object.assign(payload, {
+          region: picked.region, population: picked.population || "", languages: picked.languages || "",
+          currencies: picked.currencies || "", currencyCode: picked.currencyCode || "",
+        });
+      }
+      try {
+        if (editingId) {
+          await api(`/api/destinations/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
+        } else {
+          await api("/api/destinations", { method: "POST", body: JSON.stringify(payload) });
+        }
+        resetForm();
+        loadDestinations();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    $("filter").onchange = (e) => { view.filter = e.target.value; render(); };
+    $("sort").onchange = (e) => { view.sort = e.target.value; render(); };
+    $("printBtn").onclick = () => window.print();
+    $("copyBtn").onclick = async () => {
+      const text = "My travel bucket list\n" + destinations.map((d) =>
+        `${d.status === "visited" ? "[x]" : "[ ]"} ${d.country}${d.capital ? ` (${d.capital})` : ""}${d.date ? `, ${d.date}` : ""}${d.note ? `: ${d.note}` : ""}`
+      ).join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        $("copyBtn").textContent = "Copied";
+        setTimeout(() => ($("copyBtn").textContent = "Copy list"), 1500);
+      } catch { alert(text); }
+    };
+
+    async function deleteDestination(id) {
+      if (!confirm("Delete this destination?")) return;
+      try {
+        await api(`/api/destinations/${id}`, { method: "DELETE" });
+        if (editingId === id) resetForm();
+        loadDestinations();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    /* ---------- Search ---------- */
+    function resultRow(c) {
+      const capital = c.capital === "Unknown" ? "" : c.capital;
+      const li = el("li", "result");
+      li.tabIndex = 0;
+      li.setAttribute("role", "button");
+
+      const photo = photoBox(capital, c.country, 330);
+      photo.classList.add("photo");
+      li.appendChild(photo);
+
+      const text = document.createElement("div");
+      const name = el("div", "name");
+      if (c.flag) {
+        const flag = document.createElement("img");
+        flag.src = c.flag;
+        flag.alt = "";
+        name.appendChild(flag);
+      }
+      name.append(c.country);
+      text.appendChild(name);
+
+      const lines = [
+        [capital && `Capital: ${capital}`, c.region !== "Unknown" && `Region: ${c.region}`, c.population && `Population: ${c.population}`],
+        [c.currencies && `Currency: ${c.currencies}`, c.languages && `Languages: ${c.languages}`],
+      ];
+      for (const parts of lines) {
+        const line = parts.filter(Boolean).join("   ");
+        if (line) text.appendChild(el("div", "meta", line));
+      }
+      li.appendChild(text);
+
+      const choose = () => {
+        $("country").value = c.country;
+        $("capital").value = capital;
+        document.querySelectorAll(".result.selected").forEach((r) => r.classList.remove("selected"));
+        li.classList.add("selected");
+        picked = c;
+        showTips(c);
+      };
+      li.onclick = choose;
+      li.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); } };
+      return li;
+    }
+
+    /* ---------- Things to do (Wikivoyage, no API key) ---------- */
+    const tipsCache = new Map();
+
+    async function wikivoyage(params) {
+      const qs = new URLSearchParams({ format: "json", formatversion: "2", origin: "*", ...params });
+      const res = await fetch("https://en.wikivoyage.org/w/api.php?" + qs);
+      if (!res.ok) throw new Error("Wikivoyage request failed");
+      return res.json();
+    }
+
+    function shorten(text, max) {
+      text = text.replace(/\[\d+\]/g, "").replace(/\s+/g, " ").trim();
+      if (text.length <= max) return text;
+      const cut = text.slice(0, max);
+      const stop = cut.lastIndexOf(". ");
+      return stop > 60 ? cut.slice(0, stop + 1) : cut.replace(/\s\S*$/, "") + "…";
+    }
+
+    async function sectionItems(page, sections, name) {
+      const s = sections.find((x) => x.line.toLowerCase() === name && !String(x.index).startsWith("T-"));
+      if (!s) return [];
+      const data = await wikivoyage({ action: "parse", page, redirects: "1", prop: "text", section: s.index });
+      const doc = new DOMParser().parseFromString(data.parse?.text || "", "text/html");
+      doc.querySelectorAll("sup, style, table, .mw-editsection").forEach((n) => n.remove());
+      let nodes = [...doc.querySelectorAll("li")];
+      if (nodes.length < 2) nodes = [...doc.querySelectorAll("p")];
+      return nodes
+        .map((n) => shorten(n.textContent, 150))
+        .filter((t) => t.length > 25)
+        .slice(0, 5);
+    }
+
+    function getTips(country) {
+      if (!tipsCache.has(country)) {
+        tipsCache.set(country, (async () => {
+          try {
+            const secs = await wikivoyage({ action: "parse", page: country, redirects: "1", prop: "sections" });
+            const sections = secs.parse?.sections || [];
+            const title = secs.parse?.title || country;
+
+            let heading = "Things to do";
+            let items = await sectionItems(country, sections, "do");
+            if (items.length < 2) {
+              heading = "Top sights";
+              items = await sectionItems(country, sections, "see");
+            }
+
+            let summary = "";
+            try {
+              const r = await fetch("https://en.wikivoyage.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")));
+              if (r.ok) summary = shorten((await r.json()).extract || "", 220);
+            } catch {}
+
+            return { title, heading, items, summary };
+          } catch {
+            return null;
+          }
+        })());
+      }
+      return tipsCache.get(country);
+    }
+
+    /* ---------- Budget (rough estimates, converted to local currency) ---------- */
+    // Estimated USD per person per day, excluding international flights
+    const LEVELS = {
+      1: { low: 25, mid: 70, high: 200 },
+      2: { low: 40, mid: 110, high: 280 },
+      3: { low: 70, mid: 170, high: 400 },
+      4: { low: 110, mid: 260, high: 600 },
+    };
+    const TIERS = [["low", "Low"], ["mid", "Medium"], ["high", "Extreme (luxury)"]];
+    const AFFORD = {
+      1: {
+        low: ["Hostel dorm or simple guesthouse", "Street food and local eateries", "Buses, trains and shared rides"],
+        mid: ["Private room in a comfortable hotel", "Restaurant meals every day", "Guided day tours and entry fees", "Occasional domestic flight"],
+        high: ["Boutique or 5-star hotel", "Fine dining and drinks", "Private driver and guide", "Spa days and premium experiences"],
+      },
+      2: {
+        low: ["Hostel bed or budget room", "Cheap local meals, some self-catering", "Public transport and walking"],
+        mid: ["3-star hotel or good apartment", "Restaurant dinners most nights", "Day trips, museums and tours", "Occasional taxi or rental scooter"],
+        high: ["4-5 star hotel or resort", "Top restaurants and bars", "Private tours and car hire", "Domestic flights and activities"],
+      },
+      3: {
+        low: ["Hostel dorm or very basic room", "Supermarket meals and takeaway", "Public transport and free sights"],
+        mid: ["Mid-range hotel or private rental", "Casual restaurants and cafes", "Museum entries and a few paid tours", "Regional trains and local transport"],
+        high: ["Upscale hotel or design stay", "Fine dining and cocktails", "Private tours, car rental or taxis", "Shows, spas and premium experiences"],
+      },
+      4: {
+        low: ["Shared hostel or camping", "Supermarket meals and street snacks", "Walking and local transport only"],
+        mid: ["Standard hotel or apartment", "Casual meals, a few nicer dinners", "Main attractions and local transit", "Occasional guided tour"],
+        high: ["Luxury hotel or resort", "Fine dining every night", "Private transfers and guides", "Exclusive tours and experiences"],
+      },
+    };
+    const COST_LEVEL = {};
+    const setLevel = (n, names) => names.split(",").forEach((s) => (COST_LEVEL[s.trim().toLowerCase()] = n));
+    setLevel(1, "India, Nepal, Vietnam, Cambodia, Laos, Indonesia, Philippines, Sri Lanka, Bangladesh, Pakistan, Egypt, Morocco, Georgia, Albania, Bosnia and Herzegovina, North Macedonia, Bulgaria, Ukraine, Colombia, Bolivia, Peru, Ecuador, Guatemala, Nicaragua, Honduras, Kenya, Tanzania, Uganda, Ethiopia, Myanmar, Mongolia, Uzbekistan, Kyrgyzstan");
+    setLevel(2, "Thailand, Malaysia, Mexico, Turkey, Brazil, Argentina, Costa Rica, Panama, Jordan, South Africa, Poland, Czechia, Hungary, Romania, Croatia, Greece, Portugal, Serbia, Montenegro, Slovakia, Estonia, Latvia, Lithuania, China, Taiwan, Chile, Uruguay, Dominican Republic, Tunisia, Namibia, Kazakhstan");
+    setLevel(3, "United States, Canada, United Kingdom, France, Germany, Italy, Spain, Netherlands, Belgium, Austria, Ireland, Australia, New Zealand, South Korea, Japan, Finland, Sweden, Cyprus, Malta, Slovenia, Hong Kong, Qatar, Saudi Arabia");
+    setLevel(4, "Switzerland, Norway, Iceland, Denmark, Luxembourg, Singapore, United Arab Emirates, Israel, Maldives, Bermuda, Monaco, French Polynesia, Bahamas, Seychelles");
+    const REGION_LEVEL = { Africa: 2, Asia: 2, Americas: 2, Europe: 3, Oceania: 3 };
+
+    // Built-in country -> currency code, so this works even if the server doesn't send it
+    const CURRENCY_OF = {};
+    const setCur = (code, names) => names.split(",").forEach((s) => (CURRENCY_OF[s.trim().toLowerCase()] = code));
+    setCur("USD", "United States, United States of America, Ecuador, El Salvador, Puerto Rico, Timor-Leste, Panama");
+    setCur("EUR", "Austria, Belgium, Croatia, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Portugal, Slovakia, Slovenia, Spain, Montenegro, Monaco, Andorra, Bulgaria");
+    setCur("GBP", "United Kingdom"); setCur("CHF", "Switzerland, Liechtenstein");
+    setCur("JPY", "Japan"); setCur("KRW", "South Korea"); setCur("CNY", "China"); setCur("HKD", "Hong Kong"); setCur("TWD", "Taiwan");
+    setCur("SGD", "Singapore"); setCur("THB", "Thailand"); setCur("VND", "Vietnam, Viet Nam"); setCur("IDR", "Indonesia");
+    setCur("MYR", "Malaysia"); setCur("PHP", "Philippines"); setCur("INR", "India"); setCur("NPR", "Nepal"); setCur("LKR", "Sri Lanka");
+    setCur("BDT", "Bangladesh"); setCur("PKR", "Pakistan"); setCur("KHR", "Cambodia"); setCur("LAK", "Laos"); setCur("MMK", "Myanmar");
+    setCur("MNT", "Mongolia"); setCur("KZT", "Kazakhstan"); setCur("UZS", "Uzbekistan"); setCur("KGS", "Kyrgyzstan"); setCur("GEL", "Georgia");
+    setCur("AMD", "Armenia"); setCur("AZN", "Azerbaijan"); setCur("TRY", "Turkey, Türkiye"); setCur("ILS", "Israel"); setCur("JOD", "Jordan");
+    setCur("AED", "United Arab Emirates"); setCur("SAR", "Saudi Arabia"); setCur("QAR", "Qatar"); setCur("OMR", "Oman"); setCur("KWD", "Kuwait");
+    setCur("BHD", "Bahrain"); setCur("LBP", "Lebanon"); setCur("EGP", "Egypt"); setCur("MAD", "Morocco"); setCur("TND", "Tunisia");
+    setCur("DZD", "Algeria"); setCur("ZAR", "South Africa"); setCur("NAD", "Namibia"); setCur("BWP", "Botswana"); setCur("KES", "Kenya");
+    setCur("TZS", "Tanzania"); setCur("UGX", "Uganda"); setCur("ETB", "Ethiopia"); setCur("GHS", "Ghana"); setCur("NGN", "Nigeria");
+    setCur("RWF", "Rwanda"); setCur("MUR", "Mauritius"); setCur("SCR", "Seychelles"); setCur("MVR", "Maldives");
+    setCur("AUD", "Australia"); setCur("NZD", "New Zealand"); setCur("FJD", "Fiji"); setCur("CAD", "Canada"); setCur("MXN", "Mexico");
+    setCur("CRC", "Costa Rica"); setCur("GTQ", "Guatemala"); setCur("HNL", "Honduras"); setCur("NIO", "Nicaragua"); setCur("DOP", "Dominican Republic");
+    setCur("JMD", "Jamaica"); setCur("CUP", "Cuba"); setCur("BSD", "Bahamas"); setCur("BBD", "Barbados");
+    setCur("BRL", "Brazil"); setCur("ARS", "Argentina"); setCur("CLP", "Chile"); setCur("COP", "Colombia"); setCur("PEN", "Peru");
+    setCur("BOB", "Bolivia"); setCur("UYU", "Uruguay"); setCur("PYG", "Paraguay");
+    setCur("NOK", "Norway"); setCur("SEK", "Sweden"); setCur("DKK", "Denmark"); setCur("ISK", "Iceland"); setCur("PLN", "Poland");
+    setCur("CZK", "Czechia, Czech Republic"); setCur("HUF", "Hungary"); setCur("RON", "Romania"); setCur("RSD", "Serbia"); setCur("ALL", "Albania");
+    setCur("MKD", "North Macedonia"); setCur("BAM", "Bosnia and Herzegovina"); setCur("UAH", "Ukraine"); setCur("MDL", "Moldova");
+
+    const costLevel = (c) => COST_LEVEL[c.country.toLowerCase()] || REGION_LEVEL[c.region] || 2;
+
+    let ratesPromise = null;
+    function getRates() {
+      if (!ratesPromise) {
+        ratesPromise = fetch("https://open.er-api.com/v6/latest/USD")
+          .then((r) => r.json())
+          .then((d) => d.rates || null)
+          .catch(() => null)
+          .then((r) => { if (!r) ratesPromise = null; return r; });
+      }
+      return ratesPromise;
+    }
+
+    // Prefer the code from the server; otherwise match the currency name (e.g. "Japanese yen")
+    function currencyCodeFor(c, rates) {
+      if (!rates) return "";
+      if (/^[A-Z]{3}$/.test(c.currencyCode || "") && rates[c.currencyCode]) return c.currencyCode;
+      const known = CURRENCY_OF[c.country.toLowerCase()];
+      if (known && rates[known]) return known;
+      const text = c.currencies || "";
+      const direct = (text.match(/\b[A-Z]{3}\b/g) || []).find((k) => rates[k]);
+      if (direct) return direct;
+      const names = new Intl.DisplayNames(["en"], { type: "currency" });
+      const wanted = text.toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+      for (const code of Object.keys(rates)) {
+        let n = "";
+        try { n = names.of(code).toLowerCase(); } catch {}
+        if (n && wanted.includes(n)) return code;
+      }
+      return "";
+    }
+
+    function money(value, code) {
+      const p = Math.pow(10, Math.floor(Math.log10(value)) - 1);
+      const rounded = Math.round(value / p) * p; // 2 significant figures
+      try {
+        return new Intl.NumberFormat("en", { style: "currency", currency: code, maximumFractionDigits: 0 }).format(rounded);
+      } catch {
+        return `${code} ${Math.round(rounded).toLocaleString("en")}`;
+      }
+    }
+
+    function budgetSection(c, rates) {
+      const level = costLevel(c);
+      const code = currencyCodeFor(c, rates);
+      const rate = code ? rates[code] : 0;
+      const box = el("div", "budget");
+      box.appendChild(el("h4", "", "Budget per day"));
+
+      for (const [key, label] of TIERS) {
+        const usd = LEVELS[level][key];
+        const tier = el("div", "tier");
+        const head = el("div", "tier-head");
+        head.appendChild(el("span", "tier-name", label));
+        const price = el("span", "tier-price");
+        if (rate && code !== "USD") {
+          price.append(money(usd * rate, code) + " ");
+          price.appendChild(el("small", "", `(about ${money(usd, "USD")})`));
+        } else {
+          price.append(money(usd, "USD"));
+        }
+        head.appendChild(price);
+        tier.appendChild(head);
+
+        const ul = document.createElement("ul");
+        for (const t of AFFORD[level][key]) ul.appendChild(el("li", "", t));
+        tier.appendChild(ul);
+        box.appendChild(tier);
+      }
+
+      const note = rate
+        ? `Per person, excluding flights. Rough estimates in ${code}, converted at today's rate.`
+        : rates
+          ? "Per person, excluding flights. Couldn't match this country's currency, so amounts are in US dollars."
+          : "Per person, excluding flights. Exchange rates couldn't load (check your internet connection), so amounts are in US dollars.";
+      box.appendChild(el("p", "note", note));
+      return box;
+    }
+
+    async function showTips(c) {
+      const country = c.country;
+      const box = $("tips");
+      box.dataset.country = country;
+      box.hidden = false;
+      $("split").classList.add("with-tips");
+      box.replaceChildren(el("h3", "", `Good to do in ${country}`), el("p", "", "Loading travel tips..."));
+
+      const [tips, rates] = await Promise.all([getTips(country), getRates()]);
+      if (box.dataset.country !== country) return; // user picked another country meanwhile
+
+      box.replaceChildren(el("h3", "", `Good to do in ${country}`));
+      if (!tips || (!tips.items.length && !tips.summary)) {
+        box.appendChild(el("p", "", "No travel tips found for this country yet."));
+      } else {
+        if (tips.summary) box.appendChild(el("p", "", tips.summary));
+        if (tips.items.length) {
+          box.appendChild(el("p", "", tips.heading + ":"));
+          const ul = document.createElement("ul");
+          for (const t of tips.items) ul.appendChild(el("li", "", t));
+          box.appendChild(ul);
+        }
+      }
+
+      box.appendChild(budgetSection(c, rates));
+
+      const actions = el("div", "tips-actions");
+      const add = el("button", "primary", "Add to my list");
+      add.onclick = () => {
+        $("country").scrollIntoView({ behavior: "smooth", block: "center" });
+        $("note").focus();
+      };
+      actions.appendChild(add);
+      if (tips) {
+        const a = el("a", "", "More on Wikivoyage");
+        a.href = "https://en.wikivoyage.org/wiki/" + encodeURIComponent(tips.title.replace(/ /g, "_"));
+        a.target = "_blank";
+        a.rel = "noopener";
+        actions.appendChild(a);
+      }
+      box.appendChild(actions);
+    }
+
+    $("lookupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const query = $("search").value.trim();
+      const results = $("results");
+      results.innerHTML = "";
+      $("tips").hidden = true;
+      $("split").classList.remove("with-tips");
+
+      if (!query) {
+        setMessage("Enter a country name to search.", "error");
+        return;
+      }
+      setMessage("Searching...");
+
+      try {
+        const data = await api(`/api/lookup?country=${encodeURIComponent(query)}`);
+        if (!data.length) {
+          setMessage(`No countries found for "${query}". Check the spelling and try again.`, "error");
+          return;
+        }
+        setMessage("Select a result to fill in the form below.", "success");
+        for (const c of data) results.appendChild(resultRow(c));
+      } catch (err) {
+        setMessage(err.message, "error");
+      }
+    });
+
+    loadDestinations();
+  </script>
+
+  <!-- PASTE EVERYTHING BELOW right before </body> in your index.html -->
+<style>
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .stat { background: var(--surface); border-radius: 12px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .toast-wrap { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 50; max-width: 90vw; }
+  .toast { background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; display: flex; gap: 14px; align-items: center; font-size: 14px; white-space: pre-line; }
+  .toast button { background: none; border: 0; color: var(--accent); font-weight: 600; padding: 0; }
+  .extras { padding: 0 16px 12px; font-size: 13px; }
+  .extras h5 { font-size: 13px; margin: 10px 0 4px; }
+  .extras .saved-row { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .extras .saved-row input { width: 110px; margin: 0; padding: 4px 8px; }
+  .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin: 6px 0 2px; }
+  .bar i { display: block; height: 100%; background: var(--ok); transition: width .3s; }
+  .check { display: flex; gap: 8px; align-items: center; margin: 2px 0; }
+  .check input[type=checkbox] { width: auto; margin: 0; }
+  .check.done span { text-decoration: line-through; color: var(--muted); }
+  .check .link { margin-left: auto; }
+  .addcheck { display: flex; gap: 6px; margin-top: 6px; }
+  .addcheck input { margin: 0; padding: 4px 8px; }
+</style>
+<input type="file" id="importFile" accept="application/json" hidden />
+<script>
+(() => {
+  /* Extras (checklist + savings) live in this browser's localStorage, keyed by destination id */
+  const KEY = "bucket-extras";
+  const DEFAULT_LIST = ["Passport valid 6+ months", "Check visa rules", "Book flights", "Book accommodation", "Travel insurance"];
+  let extras = {};
+  try { extras = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(extras)); } catch {} };
+  const ex = (id) => extras[id] || (extras[id] = { saved: 0, list: DEFAULT_LIST.map((t) => ({ t, done: false })) });
+
+  /* ---------- Toasts (replace alert) ---------- */
+  const wrap = el("div", "toast-wrap");
+  document.body.appendChild(wrap);
+  function toast(msg, label, fn) {
+    const t = el("div", "toast");
+    t.appendChild(el("span", "", msg));
+    if (fn) {
+      const b = el("button", "", label);
+      b.onclick = () => { t.remove(); fn(); };
+      t.appendChild(b);
+    }
+    wrap.appendChild(t);
+    setTimeout(() => t.remove(), fn ? 7000 : 3500);
+  }
+  window.alert = (m) => toast(String(m));
+
+  /* ---------- Stats bar ---------- */
+  const stats = el("div", "stats");
+  $("listSection").prepend(stats);
+  function updateStats() {
+    const visited = destinations.filter((d) => d.status === "visited");
+    const continents = new Set(visited.map((d) => d.region).filter((r) => r && r !== "Unknown"));
+    const cost = destinations.reduce((s, d) => s + tripCost(d), 0);
+    const saved = destinations.reduce((s, d) => s + (extras[d.id]?.saved || 0), 0);
+    const usd = (n) => "$" + Math.round(n).toLocaleString("en");
+    const items = [
+      [`${visited.length} / ${destinations.length}`, "Visited"],
+      [(visited.length / 195 * 100).toFixed(1) + "%", "Of the world's countries"],
+      [continents.size, "Regions covered"],
+      [usd(cost), "Total estimated cost"],
+      [usd(saved), "Saved so far"],
+    ];
+    stats.replaceChildren(...items.map(([v, l]) => { const s = el("div", "stat"); s.append(el("b", "", String(v)), el("span", "", l)); return s; }));
+    stats.hidden = !destinations.length;
+  }
+  const baseRender = render;
+  render = async function () { await baseRender(); updateStats(); };
+
+  /* ---------- Card additions: savings, checklist, move buttons, aria ---------- */
+  const baseCard = cardFor;
+  cardFor = function (d, rates) {
+    const li = baseCard(d, rates);
+    const e = ex(d.id);
+    const total = tripCost(d);
+    li.querySelector(".star")?.setAttribute("aria-pressed", String(!!d.favorite));
+
+    const box = el("div", "extras");
+
+    // Savings progress
+    const row = el("div", "saved-row");
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.min = "0"; inp.value = e.saved || ""; inp.placeholder = "0";
+    inp.setAttribute("aria-label", "Saved so far in USD");
+    row.append("Saved (USD):", inp);
+    const bar = el("div", "bar"); const fill = document.createElement("i"); bar.appendChild(fill);
+    const pct = el("div", "", "");
+    const paint = () => {
+      const p = Math.min(100, Math.round((e.saved / total) * 100)) || 0;
+      fill.style.width = p + "%";
+      pct.textContent = `${p}% of about $${Math.round(total).toLocaleString("en")}`;
+      pct.style.color = "var(--muted)";
+    };
+    inp.onchange = () => { e.saved = Math.max(0, Number(inp.value) || 0); save(); paint(); updateStats(); };
+    paint();
+    box.append(row, bar, pct);
+
+    // Checklist
+    const head = el("h5");
+    const listBox = el("div");
+    const draw = () => {
+      head.textContent = `Checklist (${e.list.filter((i) => i.done).length}/${e.list.length})`;
+      listBox.replaceChildren(...e.list.map((item, idx) => {
+        const r = el("label", "check" + (item.done ? " done" : ""));
+        const cb = document.createElement("input");
+        cb.type = "checkbox"; cb.checked = item.done;
+        cb.onchange = () => { item.done = cb.checked; save(); draw(); };
+        const x = el("button", "link", "×");
+        x.type = "button"; x.setAttribute("aria-label", "Remove item");
+        x.onclick = (ev) => { ev.preventDefault(); e.list.splice(idx, 1); save(); draw(); };
+        r.append(cb, el("span", "", item.t), x);
+        return r;
+      }));
+    };
+    const add = el("div", "addcheck");
+    const ai = document.createElement("input");
+    ai.placeholder = "Add item"; ai.setAttribute("aria-label", "New checklist item");
+    const ab = el("button", "secondary small", "Add"); ab.type = "button";
+    const addItem = () => { const t = ai.value.trim(); if (!t) return; e.list.push({ t, done: false }); ai.value = ""; save(); draw(); };
+    ab.onclick = addItem;
+    ai.onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); addItem(); } };
+    add.append(ai, ab);
+    draw();
+    box.append(head, listBox, add);
+    li.insertBefore(box, li.querySelector(".row-actions"));
+
+    // Move up / down (keyboard + touch friendly)
+    if (view.sort === "manual" && view.filter === "all") {
+      const move = (dir) => async () => {
+        const i = destinations.findIndex((x) => x.id === d.id), j = i + dir;
+        if (j < 0 || j >= destinations.length) return;
+        destinations.splice(j, 0, destinations.splice(i, 1)[0]);
+        render();
+        try { await api("/api/destinations/reorder", { method: "POST", body: JSON.stringify({ ids: destinations.map((x) => x.id) }) }); }
+        catch (err) { alert(err.message); }
+      };
+      const up = el("button", "link", "↑"), dn = el("button", "link", "↓");
+      up.setAttribute("aria-label", "Move up"); dn.setAttribute("aria-label", "Move down");
+      up.onclick = move(-1); dn.onclick = move(1);
+      li.querySelector(".row-actions").prepend(up, dn);
+    }
+    return li;
+  };
+
+  /* ---------- Entry requirements (Wikivoyage "Get in") ---------- */
+  const baseFill = fillDetails;
+  fillDetails = function (d, box) {
+    baseFill(d, box);
+    const sec = el("div", "", "");
+    sec.appendChild(el("p", "muted", "Loading entry info..."));
+    box.appendChild(sec);
+    (async () => {
+      try {
+        const s = await wikivoyage({ action: "parse", page: d.country, redirects: "1", prop: "sections" });
+        const items = (await sectionItems(d.country, s.parse?.sections || [], "get in")).slice(0, 3);
+        sec.replaceChildren();
+        if (!items.length) return;
+        sec.appendChild(el("p", "", "Entry requirements:"));
+        const ul = document.createElement("ul");
+        items.forEach((t) => ul.appendChild(el("li", "", t)));
+        sec.appendChild(ul);
+        sec.appendChild(el("p", "muted", "Always confirm with the official government or embassy site before booking."));
+      } catch { sec.replaceChildren(); }
+    })();
+  };
+
+  /* ---------- Delete with Undo ---------- */
+  deleteDestination = async function (id) {
+    const d = destinations.find((x) => x.id === id);
+    if (!d) return;
+    try {
+      await api(`/api/destinations/${id}`, { method: "DELETE" });
+      if (editingId === id) resetForm();
+      await loadDestinations();
+      toast(`Deleted ${d.country}.`, "Undo", async () => {
+        try {
+          const { id: _old, ...rest } = d;
+          const n = await api("/api/destinations", { method: "POST", body: JSON.stringify(rest) });
+          if (n && n.id && extras[id]) { extras[n.id] = extras[id]; save(); }
+          await loadDestinations();
+        } catch (err) { alert(err.message); }
+      });
+    } catch (err) { alert(err.message); }
+  };
+
+  /* ---------- Export / Import JSON ---------- */
+  const tools = document.querySelector(".tools");
+  const exp = el("button", "secondary small", "Export"), imp = el("button", "secondary small", "Import");
+  exp.type = imp.type = "button";
+  tools.append(exp, imp);
+
+  exp.onclick = () => {
+    const data = destinations.map((d) => ({ ...d, _extras: extras[d.id] }));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    a.download = "bucket-list.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  imp.onclick = () => $("importFile").click();
+  $("importFile").onchange = async (ev) => {
+    const f = ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    try {
+      const list = JSON.parse(await f.text());
+      if (!Array.isArray(list)) throw new Error("That file isn't a bucket list backup.");
+      for (const item of list) {
+        const { id, _extras, ...rest } = item;
+        const n = await api("/api/destinations", { method: "POST", body: JSON.stringify(rest) });
+        if (_extras && n && n.id) extras[n.id] = _extras;
+      }
+      save();
+      await loadDestinations();
+      toast(`Imported ${list.length} destination${list.length === 1 ? "" : "s"}.`);
+    } catch (err) { alert(err.message); }
+  };
+
+    render();
+})();
+</script>
+
+<style>
+  :root {
+    --bg: #ffffff; --card: #ffffff; --page: #f3f5f9; --surface: #eaeef5;
+    --text: #0f1b2d; --muted: #5b6778; --line: #d9e0ea;
+    --accent: #1d4ed8; --accent-text: #ffffff; --danger: #b91c1c; --ok: #15803d;
+    --shadow: 0 1px 2px rgba(15,27,45,.06), 0 4px 14px rgba(15,27,45,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101a27; --card: #142030; --page: #0b121b; --surface: #1a2638;
+      --text: #e6ebf2; --muted: #93a1b5; --line: #263447;
+      --accent: #60a5fa; --accent-text: #07111f; --danger: #f87171; --ok: #4ade80;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
+    }
+  }
+  body { background: var(--page); }
+  .hero { background: linear-gradient(135deg, #0b1f3a, #1e3a8a) center / cover no-repeat; }
+  .hero::before { background: linear-gradient(to top, rgba(8,18,34,.88), rgba(8,18,34,.25)); }
+  .hero h1 { font-weight: 700; letter-spacing: -0.025em; }
+  .hero p { opacity: .85; }
+  h2 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .toolbar h2 .muted { text-transform: none; letter-spacing: 0; }
+  input, textarea, select { border-color: var(--line); background: var(--bg); }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .primary { box-shadow: 0 1px 2px rgba(15,27,45,.2); transition: background .15s, transform .05s; }
+  .primary:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 88%, #000); }
+  .primary:active { transform: translateY(1px); }
+  .secondary { background: var(--bg); }
+  .secondary:hover { color: var(--accent); border-color: var(--accent); }
+  .link:hover { color: var(--accent); }
+  .link.danger:hover { color: var(--danger); }
+  .result { background: var(--card); border-color: var(--line); box-shadow: var(--shadow); }
+  .result:hover, .result.selected { border-color: var(--accent); }
+  .tips { background: var(--card); box-shadow: var(--shadow); }
+  .tier-price { color: var(--accent); font-weight: 600; }
+  .card { background: var(--card); border-color: var(--line); box-shadow: var(--shadow); transition: box-shadow .2s, transform .2s; }
+  .card:hover { box-shadow: 0 2px 4px rgba(15,27,45,.08), 0 10px 24px rgba(15,27,45,.1); transform: translateY(-1px); }
+  .star { background: rgba(8,18,34,.6); }
+  .details { border-top: 1px solid var(--line); padding-top: 12px; }
+  .extras { border-top: 1px solid var(--line); padding-top: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .stat b { color: var(--accent); font-size: 22px; }
+  .stat span { text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+  .bar { background: var(--surface); }
+  .bar i { background: linear-gradient(90deg, var(--accent), var(--ok)); }
+  .toast { background: #0f1b2d; color: #f1f5f9; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  .toast button { color: #93c5fd; }
+  #map { box-shadow: var(--shadow); }
+  footer { border-top: 1px solid var(--line); padding-top: 18px; }
+</style>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit destination</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    input, textarea { display: block; margin-bottom: 0.75rem; width: 300px; padding: 0.5rem; }
+    button { padding: 0.5rem 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Edit destination</h1>
+
+  <input id="country" placeholder="Country" /><br />
+  <input id="capital" placeholder="Capital" /><br />
+  <textarea id="note" placeholder="Why do you want to visit?"></textarea><br />
+  <button onclick="saveDestination()">Save</button>
+  <a href="index.html">Cancel</a>
+
+  <script>
+    const id = new URLSearchParams(location.search).get("id");
+
+    async function loadDestination() {
+      const res = await fetch("/api/destinations");
+      const destinations = await res.json();
+
+      const destination = destinations.find((item) => String(item.id) === String(id));
+      if (!destination) return;
+
+      document.getElementById("country").value = destination.country || "";
+      document.getElementById("capital").value = destination.capital || "";
+      document.getElementById("note").value = destination.note || "";
+    }
+
+    async function saveDestination() {
+      const destination = {
+        country: document.getElementById("country").value.trim(),
+        capital: document.getElementById("capital").value.trim(),
+        note: document.getElementById("note").value.trim(),
+      };
+
+      await fetch("/api/destinations/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(destination),
+      });
+
+      window.location.href = "index.html";
+    }
+
+    loadDestination();
+  </script>
+</body>
+</html>
