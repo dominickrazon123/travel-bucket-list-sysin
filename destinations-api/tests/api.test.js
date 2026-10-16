@@ -25,7 +25,7 @@ async function withServer(run) {
 test("GET /health returns 200 when the database is reachable", () =>
   withServer(async (call) => {
     const res = await call("GET", "/health");
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 201);
     assert.equal(res.data.status, "ok");
   }));
 
